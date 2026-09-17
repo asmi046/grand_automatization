@@ -1,0 +1,30 @@
+{
+  "pravo": {
+    "loginPath": "/ms/Account/v3/JSONLogOn",
+    "profilePath": "/api/Account/Profile",
+    "listGroupsPath": "/ms/UserData/Folder/ListGroups",
+    "folderCasesPath": "/ms/UserData/Folder/Cases",
+    "iWillGoPath": "/ms/UserData/CaseSessions/IWillGo",
+    "requestTimeoutMs": 30000,
+    "debug": true,
+    "defaultHeaders": {
+      "X-Requested-With": "XMLHttpRequest"
+    }
+  },
+  "db": {
+    "dialect": "mysql",
+    "syncAlter": true,
+    "pool": {
+      "max": 5,
+      "min": 0,
+      "acquire": 30000,
+      "idle": 10000
+    }
+  },
+  "web": {
+    "session": {
+      "cookieName": "grand_pravo.sid",
+      "maxAgeMs": 86400000
+    }
+  }
+}
