@@ -33,6 +33,17 @@ function requireEnv(name) {
   return value;
 }
 
+function optionalEnv(name, def) {
+  const value = normalizeEnvValue(process.env[name]);
+  return value === '' || value == null ? def : value;
+}
+
+function boolEnv(name, def) {
+  const v = optionalEnv(name, '');
+  if (v === '') return def;
+  return /^(1|true|yes|on)$/i.test(v);
+}
+
 const fileConfig = loadJsonConfig();
 
 const config = {
@@ -55,6 +66,10 @@ const config = {
     username: requireEnv('WEB_USERNAME'),
     password: requireEnv('WEB_PASSWORD'),
     sessionSecret: requireEnv('SESSION_SECRET'),
+    session: {
+      ...fileConfig.web.session,
+      secure: boolEnv('WEB_SESSION_SECURE', fileConfig.web.session.secure),
+    },
   },
 };
 

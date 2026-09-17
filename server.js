@@ -23,7 +23,7 @@ app.use(
     cookie: {
       httpOnly: true,
       sameSite: 'lax',
-      secure: false,
+      secure: config.web.session.secure,
       maxAge: config.web.session.maxAgeMs,
     },
   }),

@@ -24,7 +24,8 @@
   "web": {
     "session": {
       "cookieName": "grand_pravo.sid",
-      "maxAgeMs": 86400000
+      "maxAgeMs": 86400000,
+      "secure": false
     }
   }
 }
