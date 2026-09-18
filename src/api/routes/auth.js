@@ -14,6 +14,8 @@ router.post('/login', (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
   req.session.user = { username };
+  console.log('[login] sessionID=', req.sessionID);
+  console.log('[login] session cookie config=', JSON.stringify(req.session?.cookie));
   res.json({ ok: true, user: req.session.user });
 });
 
