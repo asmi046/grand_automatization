@@ -20,7 +20,14 @@
     </el-form>
 
     <el-table :data="rows" v-loading="loading" stripe border>
-      <el-table-column prop="caseNumber" label="Номер дела" width="200" />
+      <el-table-column label="Номер дела / caseId" width="260">
+        <template #default="{ row }">
+          <div>{{ row.caseNumber || '—' }}</div>
+          <div style="color: #888; font-size: 11px; font-family: ui-monospace, monospace">
+            {{ row.caseId || '' }}
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column prop="courtName" label="Суд" />
       <el-table-column prop="judgeName" label="Судья" width="200" />
       <el-table-column prop="status" label="Статус" width="240" />

@@ -26,6 +26,11 @@ const Case = sequelize.define(
     versionDateUtc: { type: DataTypes.DATE, allowNull: true },
     groupName: { type: DataTypes.STRING(255), allowNull: true },
     folderId: { type: DataTypes.INTEGER, allowNull: true },
+    checkId: {
+      type: DataTypes.STRING(36),
+      allowNull: true,
+      references: { model: 'checks', key: 'checkId' },
+    },
   },
   {
     tableName: 'cases',
@@ -33,6 +38,7 @@ const Case = sequelize.define(
     indexes: [
       { fields: ['caseNumber'] },
       { fields: ['groupName', 'folderId'] },
+      { fields: ['checkId'] },
     ],
   },
 );
@@ -85,9 +91,11 @@ const Session = sequelize.define(
     instanceNumber: { type: DataTypes.STRING(64), allowNull: true },
     description: { type: DataTypes.STRING(255), allowNull: true },
     documentId: { type: DataTypes.STRING(36), allowNull: true },
+    courtTag: { type: DataTypes.STRING(32), allowNull: true },
     iWillGo: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     isAutoChecked: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     autoCheckedTime: { type: DataTypes.DATE, allowNull: true },
+    loadToLiderTask: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     rawEvent: { type: DataTypes.JSON, allowNull: true },
   },
   {
@@ -144,6 +152,8 @@ Check.hasMany(Event, { foreignKey: 'checkId', sourceKey: 'checkId' });
 Event.belongsTo(Check, { foreignKey: 'checkId', targetKey: 'checkId' });
 Check.hasMany(Session, { foreignKey: 'checkId', sourceKey: 'checkId' });
 Session.belongsTo(Check, { foreignKey: 'checkId', targetKey: 'checkId' });
+Case.hasMany(Event, { foreignKey: 'caseId', sourceKey: 'caseId' });
+Event.belongsTo(Case, { foreignKey: 'caseId', targetKey: 'caseId' });
 
 async function logEvent({ eventType, caseId, caseNumber, sessionId, checkId, payload }) {
   return Event.create({

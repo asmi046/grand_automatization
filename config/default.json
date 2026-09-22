@@ -4,11 +4,32 @@
     "profilePath": "/api/Account/Profile",
     "listGroupsPath": "/ms/UserData/Folder/ListGroups",
     "folderCasesPath": "/ms/UserData/Folder/Cases",
+    "caseEventsPath": "/ms/CaseCard/api/v1/Event/List",
     "iWillGoPath": "/ms/UserData/CaseSessions/IWillGo",
     "requestTimeoutMs": 30000,
     "debug": true,
     "defaultHeaders": {
       "X-Requested-With": "XMLHttpRequest"
+    }
+  },
+  "leadertask": {
+    "baseUrl": "https://web.leadertask.com",
+    "apiPrefix": "/api/v1",
+    "authPath": "/users/authjson",
+    "refreshPath": "/tokens/refresh",
+    "existsPath": "/users/exists",
+    "accountInfoPath": "/account/info",
+    "accountExitPath": "/account/exit",
+    "accountRightsPath": "/account/rights",
+    "navigatorInfoPath": "/navigator/info",
+    "taskPath": "/task",
+    "tagPath": "/tag",
+    "system": "web",
+    "typeDevice": "web",
+    "requestTimeoutMs": 30000,
+    "debug": true,
+    "defaultHeaders": {
+      "Accept": "application/json"
     }
   },
   "db": {

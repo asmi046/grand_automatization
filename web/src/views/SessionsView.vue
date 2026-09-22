@@ -1,6 +1,16 @@
 <template>
   <div>
     <el-form :inline="true" :model="filters" @submit.prevent="load(1)">
+      <el-form-item label="Дело">
+        <el-input
+          v-model="filters.caseNumber"
+          placeholder="А40-299879/2026"
+          clearable
+          @keyup.enter="load(1)"
+          @clear="load(1)"
+          style="width: 200px"
+        />
+      </el-form-item>
       <el-form-item label="С">
         <el-date-picker v-model="filters.dateFrom" type="datetime" placeholder="от" value-format="YYYY-MM-DDTHH:mm:ss" />
       </el-form-item>
@@ -23,8 +33,13 @@
     </el-form>
 
     <el-table :data="rows" v-loading="loading" stripe border>
-      <el-table-column label="Дата" width="180">
-        <template #default="{ row }">{{ formatDate(row.date) }}</template>
+      <el-table-column label="Дата" width="190">
+        <template #default="{ row }">
+          <div>{{ formatDate(row.date) }}</div>
+          <div v-if="row.sessionId" style="color: #888; font-size: 11px; font-family: ui-monospace, monospace">
+            {{ row.sessionId }}
+          </div>
+        </template>
       </el-table-column>
       <el-table-column label="Дело" width="200">
         <template #default="{ row }">
@@ -70,7 +85,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref, onMounted, watch } from 'vue';
 import { api, formatDate } from '../api';
 
 const rows = ref([]);
@@ -80,6 +95,7 @@ const size = ref(30);
 const loading = ref(false);
 
 const filters = reactive({
+  caseNumber: '',
   dateFrom: '',
   dateTo: '',
   court: '',
@@ -87,17 +103,27 @@ const filters = reactive({
   upcomingOnly: true,
 });
 
+watch(
+  () => filters.caseNumber,
+  (val) => {
+    if (val && val.length >= 3) load(1);
+  },
+);
+
 async function load(p) {
   if (p) page.value = p;
   loading.value = true;
   try {
     if (filters.upcomingOnly) {
-      const { data } = await api.get('/sessions/upcoming', { params: { size: size.value } });
+      const params = { size: size.value };
+      if (filters.caseNumber) params.caseNumber = filters.caseNumber;
+      const { data } = await api.get('/sessions/upcoming', { params });
       rows.value = data.items;
       total.value = data.total;
       return;
     }
     const params = { page: page.value, size: size.value };
+    if (filters.caseNumber) params.caseNumber = filters.caseNumber;
     if (filters.dateFrom) params.dateFrom = filters.dateFrom;
     if (filters.dateTo) params.dateTo = filters.dateTo;
     if (filters.court) params.court = filters.court;
@@ -111,6 +137,7 @@ async function load(p) {
 }
 
 function reset() {
+  filters.caseNumber = '';
   filters.dateFrom = '';
   filters.dateTo = '';
   filters.court = '';

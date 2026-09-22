@@ -41,43 +41,29 @@ function projectCase(c) {
 async function upsertCase(c, checkId) {
   const data = projectCase(c);
   const [, created] = await Case.upsert(data, { returning: false });
+
+  if (created && checkId) {
+    await Case.update({ checkId }, { where: { caseId: data.caseId } });
+  }
+
   return { created };
 }
 
-async function upsertSession(caseRow, c, checkId) {
-  const e = c.nextEvent;
-  if (!e || !e.sessionId) return null;
-  const incomingIWillGo = !!e.iWillGo;
+async function upsertCase(c, checkId) {
+  const data = projectCase(c);
 
-  if (!incomingIWillGo) {
-    await Session.update(
-      { isAutoChecked: false, autoCheckedTime: null },
-      { where: { sessionId: e.sessionId } },
-    );
+  if (!data.checkId) data.checkId = checkId;
+
+  const [, created] = await Case.upsert(data, { returning: false });
+
+  if (created) {
+    await Case.update({ checkId }, { where: { caseId: data.caseId } });
   }
 
-  const data = {
-    sessionId: e.sessionId,
-    caseId: caseRow.caseId,
-    date: new Date(e.date),
-    court: e.court ?? null,
-    judge: e.judge ?? null,
-    judgeId: e.judgeId ?? null,
-    instanceLevel: e.instanceLevel ?? null,
-    instanceNumber: e.instanceNumber ?? null,
-    description: e.description ?? null,
-    documentId: e.documentId ?? null,
-    iWillGo: incomingIWillGo,
-    rawEvent: e,
-  };
-  const [row, created] = await Session.upsert(data, { returning: true });
-  if (created && checkId) {
-    await row.update({ checkId });
-  }
-  return { created, row };
+  return { created };
 }
 
-async function autoSetIWillGo(client, checkId) {
+async function autoSetIWillGo(client, checkId, stats) {
   const now = new Date();
   const candidates = await Session.findAll({
     where: { iWillGo: false, date: { [Op.gte]: now } },
@@ -90,7 +76,7 @@ async function autoSetIWillGo(client, checkId) {
     return { ok: 0, fail: 0 };
   }
 
-  console.log(`\n=== [5] Авто-простановка «я иду» (${candidates.length} шт.) ===`);
+  console.log(`\n=== [5/7] Авто-простановка «я иду» (${candidates.length} шт.) ===`);
   let ok = 0;
   let fail = 0;
 
@@ -120,8 +106,10 @@ async function autoSetIWillGo(client, checkId) {
       });
       console.log(`  + ${s.sessionId.slice(0, 8)}… ${s.date.toISOString()}  [${s.Case?.caseNumber ?? ''}]`);
       ok++;
+      if (stats) stats.iWillGo.ok++;
     } catch (err) {
       fail++;
+      if (stats) stats.iWillGo.fail++;
       const detail = err instanceof PravoError ? `${err.status} ${JSON.stringify(err.body)}` : err.message;
       console.error(`  ! ${s.sessionId.slice(0, 8)}… FAIL: ${detail}`);
     }
@@ -129,6 +117,112 @@ async function autoSetIWillGo(client, checkId) {
 
   console.log(`Auto-check итог: ${ok} ok, ${fail} fail`);
   return { ok, fail };
+}
+
+function projectEvent(e, caseRow) {
+  const judge =
+    e.judges?.find?.((j) => j.role === 'MainJudge' || j.role === 'Судья-докладчик')?.name ??
+    e.judges?.[0]?.name ??
+    e.judge ?? e.Judge ?? e.judgeName ?? e.JudgeName ?? null;
+  const judgeId =
+    e.judges?.find?.((j) => j.role === 'MainJudge' || j.role === 'Судья-докладчик')?.id ??
+    e.judges?.[0]?.id ??
+    e.judgeId ?? e.JudgeId ?? null;
+  return {
+    sessionId: e.id ?? e.Id ?? e.sessionId ?? e.SessionId,
+    caseId: caseRow.caseId,
+    date: new Date(e.hearingDate ?? e.date ?? e.Date),
+    court: e.courtName ?? e.CourtName ?? e.court ?? e.Court ?? null,
+    courtTag: e.courtTag ?? e.CourtTag ?? null,
+    judge,
+    judgeId,
+    instanceLevel: e.instanceLevel ?? e.InstanceLevel ?? null,
+    instanceNumber: e.instanceNumber ?? e.InstanceNumber ?? null,
+    description: e.hearingPlace ?? e.description ?? e.Description ?? null,
+    documentId: e.reasonDocumentId ?? e.documentId ?? e.DocumentId ?? null,
+    iWillGo: !!(e.iWillGo ?? e.IWillGo),
+    rawEvent: e,
+  };
+}
+
+async function ingestCaseEvents(client, checkId, stats) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const cases = await Case.findAll({
+    attributes: ['caseId', 'caseNumber', 'checkId'],
+    order: [['versionDateUtc', 'DESC']],
+  });
+
+  if (cases.length === 0) {
+    console.log('\n=== [5] Нет дел — пропускаем Event/List ===');
+    return { added: 0, existed: 0, fail: 0 };
+  }
+
+  const newCases = cases.filter((c) => c.checkId === checkId).length;
+  console.log(`\n=== [5] Event/List для ${cases.length} дел (${newCases} новых) ===`);
+  let added = 0;
+  let existed = 0;
+  let fail = 0;
+
+  for (const c of cases) {
+    try {
+      let page = 1;
+      while (true) {
+        const res = await client.listCaseEvents(c.caseId, {
+          dateFrom: today,
+          page,
+          count: 50,
+        });
+
+        const items = res?.result?.items ?? res?.result?.Items ?? res?.items ?? [];
+        const total = res?.result?.totalCount ?? items.length;
+        const pages = res?.result?.pagesCount ?? 1;
+        console.log(`    case=${c.caseNumber}: items=${items.length} total=${total} pages=${pages}`);
+
+        for (const e of items) {
+          const data = projectEvent(e, c);
+          if (!data.sessionId) continue;
+
+          const existing = await Session.findOne({
+            where: { sessionId: data.sessionId },
+            attributes: ['id'],
+          });
+          if (existing) {
+            existed++;
+            continue;
+          }
+          try {
+            await Session.create({ ...data, checkId });
+            added++;
+            stats.sessions.new++;
+          } catch (err) {
+            console.error(`      DB ERROR for ${data.sessionId}:`);
+            console.error(JSON.stringify(err.errors || err, null, 2));
+            throw err;
+          }
+          await logEvent({
+            eventType: EVENT_TYPES.SESSION_ADDED,
+            caseId: c.caseId,
+            caseNumber: c.caseNumber,
+            sessionId: data.sessionId,
+            checkId,
+            payload: e,
+          });
+          console.log(`    + ${data.sessionId.slice(0, 8)}… ${data.date.toISOString()}  [${c.caseNumber}]`);
+        }
+
+        if (page >= pages) break;
+        page++;
+      }
+    } catch (err) {
+      fail++;
+      const detail = err instanceof PravoError ? `${err.status} ${JSON.stringify(err.body)}` : err.message;
+      console.error(`    ! case=${c.caseNumber} FAIL: ${detail}`);
+    }
+  }
+
+  console.log(`Event/List итог: +${added} added, ~${existed} existed, !${fail} fail`);
+  return { added, existed, fail };
 }
 
 (async () => {
@@ -209,23 +303,6 @@ async function autoSetIWillGo(client, checkId) {
           } else {
             stats.cases.updated++;
           }
-
-          const sessionRes = await upsertSession({ caseId: c.caseId }, c, check.checkId);
-          if (sessionRes) {
-            if (sessionRes.created) {
-              stats.sessions.new++;
-              await logEvent({
-                eventType: EVENT_TYPES.SESSION_ADDED,
-                caseId: c.caseId,
-                caseNumber: c.caseNumber,
-                sessionId: c.nextEvent.sessionId,
-                checkId: check.checkId,
-                payload: c.nextEvent,
-              });
-            } else {
-              stats.sessions.updated++;
-            }
-          }
         }
 
         if (page >= pages) break;
@@ -235,12 +312,19 @@ async function autoSetIWillGo(client, checkId) {
 
     console.log(
       `\n=== Sync summary ===\n` +
-        `Cases:    +${stats.cases.new} new, ~${stats.cases.updated} updated\n` +
-        `Sessions: +${stats.sessions.new} new, ~${stats.sessions.updated} updated`,
+        `Cases:    +${stats.cases.new} new, ~${stats.cases.updated} updated`,
     );
 
-    const auto = await autoSetIWillGo(client, check.checkId);
-    stats.iWillGo = auto;
+    await autoSetIWillGo(client, check.checkId, stats);
+
+    const events = await ingestCaseEvents(client, check.checkId, stats);
+    stats.events = events;
+
+    const autoPost = await autoSetIWillGo(client, check.checkId, stats);
+    const postAdded = autoPost.ok;
+    console.log(
+      `Auto-check итоговый: +${postAdded} после Event/List (всего ok=${stats.iWillGo.ok} fail=${stats.iWillGo.fail})`,
+    );
 
     await check.update({
       endedAt: new Date(),

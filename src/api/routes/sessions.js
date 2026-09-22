@@ -28,14 +28,20 @@ router.get('/', async (req, res, next) => {
 
     const order = req.query.order === 'desc' ? [['date', 'DESC']] : [['date', 'ASC']];
 
+    const include = [
+      {
+        model: Case,
+        attributes: ['caseId', 'caseNumber', 'courtName', 'status'],
+        required: !!req.query.caseNumber,
+      },
+    ];
+    if (req.query.caseNumber) {
+      include[0].where = { caseNumber: { [Op.like]: `%${req.query.caseNumber}%` } };
+    }
+
     const { count, rows } = await Session.findAndCountAll({
       where,
-      include: [
-        {
-          model: Case,
-          attributes: ['caseId', 'caseNumber', 'courtName', 'status'],
-        },
-      ],
+      include,
       limit: size,
       offset,
       order,
@@ -56,12 +62,18 @@ router.get('/', async (req, res, next) => {
 router.get('/upcoming', async (req, res, next) => {
   try {
     const size = Math.min(intParam(req.query.size, 50), 200);
-    const rows = await Session.findAll({
-      where: { date: { [Op.gte]: new Date() } },
-      include: [{ model: Case, attributes: ['caseId', 'caseNumber', 'courtName', 'status'] }],
-      order: [['date', 'ASC']],
-      limit: size,
-    });
+
+    const where = { date: { [Op.gte]: new Date() } };
+    const include = [{ model: Case, attributes: ['caseId', 'caseNumber', 'courtName', 'status'] }];
+    if (req.query.caseId) where.caseId = req.query.caseId;
+    if (req.query.court) where.court = { [Op.like]: `%${req.query.court}%` };
+    if (req.query.judge) where.judge = { [Op.like]: `%${req.query.judge}%` };
+    if (req.query.caseNumber) {
+      include[0].required = true;
+      include[0].where = { caseNumber: { [Op.like]: `%${req.query.caseNumber}%` } };
+    }
+
+    const rows = await Session.findAll({ where, include, order: [['date', 'ASC']], limit: size });
     res.json({ items: rows, total: rows.length });
   } catch (err) {
     next(err);

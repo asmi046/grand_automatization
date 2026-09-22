@@ -164,6 +164,28 @@ class PravoClient {
     return this._handle(res);
   }
 
+  async listCaseEvents(caseId, {
+    dateFrom,
+    dateTo = null,
+    eventTypes = ['AllSessions'],
+    page = 1,
+    count = 50,
+  } = {}) {
+    const payload = {
+      caseId,
+      eventFilter: {
+        dateFilter: { dateFrom, dateTo },
+        eventTypes,
+      },
+      paging: { page, count },
+      sort: [{ field: 'Date', order: 'Ascending', index: 0 }],
+    };
+    const res = await this.http.post(config.pravo.caseEventsPath, payload, {
+      headers: { Referer: `https://dela.pravo.tech/card/case/review/${caseId}` },
+    });
+    return this._handle(res);
+  }
+
   async post(path, payload = {}, extraHeaders = {}) {
     const res = await this.http.post(path, payload, { headers: extraHeaders });
     return this._handle(res);
