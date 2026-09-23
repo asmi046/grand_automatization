@@ -2,10 +2,12 @@ const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+const PROJECT_ROOT = path.resolve(__dirname, '..');
+
+dotenv.config({ path: path.join(PROJECT_ROOT, '.env') });
 
 function loadJsonConfig() {
-  const configPath = path.resolve(process.cwd(), 'config', 'default.json');
+  const configPath = path.join(PROJECT_ROOT, 'config', 'default.json');
   return JSON.parse(fs.readFileSync(configPath, 'utf8'));
 }
 
