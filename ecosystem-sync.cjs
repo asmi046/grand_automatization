@@ -4,7 +4,7 @@ module.exports = {
       name: 'grand-pravo-sync',
       script: 'src/index.js',
       cwd: '/home/user/grand-pravo',
-      cron_restart: '0 */3 * * *',
+      cron_restart: '*/3 * * * *',
       autorestart: false,
       exec_interpreter: 'node',
       max_memory_restart: '512M',
