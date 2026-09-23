@@ -2,6 +2,13 @@
 const { randomUUID } = require('crypto');
 const { LeaderTaskClient, LeaderTaskError } = require('../leadertaskClient');
 
+function formatMsk(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  const pad = (n) => String(n).padStart(2, '0');
+  const msk = new Date(d.getTime() + 3 * 60 * 60 * 1000);
+  return `${msk.getUTCFullYear()}-${pad(msk.getUTCMonth() + 1)}-${pad(msk.getUTCDate())}T${pad(msk.getUTCHours())}:${pad(msk.getUTCMinutes())}:${pad(msk.getUTCSeconds())}`;
+}
+
 function parseArgs(argv) {
   const args = {
     login: null,
@@ -107,8 +114,12 @@ function maskToken(t) {
   let tagResolveError = null;
   if (!args.noTask) {
     console.log('\n[3/4] POST /api/v1/task (создание тестовой задачи)');
-    const nowIso = new Date().toISOString();
-    const tomorrowIso = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    const now = new Date();
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const nowIso = now.toISOString();
+    const tomorrowIso = tomorrow.toISOString();
+    const nowMsk = formatMsk(now);
+    const tomorrowMsk = formatMsk(tomorrow);
 
     let taskTagUids = [];
     if (!args.noTag) {
@@ -145,9 +156,9 @@ function maskToken(t) {
       emails: '',
       checklist: '',
       uid_marker: '00000000-0000-0000-0000-000000000000',
-      date_begin: nowIso,
+      date_begin: nowMsk,
       date_reminder: '0001-01-01T00:00:00',
-      date_end: tomorrowIso,
+      date_end: tomorrowMsk,
       focus: 1,
       tags: taskTagUids,
     };

@@ -7,6 +7,7 @@ import * as ElIcons from '@element-plus/icons-vue';
 import App from './App.vue';
 import LoginView from './views/LoginView.vue';
 import CasesView from './views/CasesView.vue';
+import CaseDetailView from './views/CaseDetailView.vue';
 import SessionsView from './views/SessionsView.vue';
 import EventsView from './views/EventsView.vue';
 import ChecksView from './views/ChecksView.vue';
@@ -20,6 +21,7 @@ const router = createRouter({
     { path: '/', redirect: '/sync' },
     { path: '/sync', component: SyncView, name: 'sync' },
     { path: '/cases', component: CasesView, name: 'cases' },
+    { path: '/cases/:caseId', component: CaseDetailView, name: 'case-detail' },
     { path: '/sessions', component: SessionsView, name: 'sessions' },
     { path: '/events', component: EventsView, name: 'events' },
     { path: '/checks', component: ChecksView, name: 'checks' },

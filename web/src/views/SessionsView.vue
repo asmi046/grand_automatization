@@ -68,6 +68,14 @@
           <span v-if="row.isAutoChecked" style="font-size: 12px">{{ formatDate(row.autoCheckedTime) }}</span>
         </template>
       </el-table-column>
+      <el-table-column label="LeaderTask" width="120">
+        <template #default="{ row }">
+          <el-tooltip v-if="row.loadToLiderTask" content="Задача в LeaderTask создана" placement="top">
+            <el-tag type="success" size="small">да</el-tag>
+          </el-tooltip>
+          <el-tag v-else type="info" size="small">нет</el-tag>
+        </template>
+      </el-table-column>
     </el-table>
 
     <el-pagination

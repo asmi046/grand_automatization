@@ -65,7 +65,10 @@ const titles = {
   checks: 'История прогонов',
   sync: 'Запуск прогона',
 };
-const headerTitle = computed(() => titles[route.name] || '');
+const headerTitle = computed(() => {
+  if (route.name === 'case-detail') return `Дело: ${route.params.caseId}`;
+  return titles[route.name] || '';
+});
 
 async function onLogout() {
   await logout();

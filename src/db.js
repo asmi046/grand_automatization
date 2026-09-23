@@ -23,6 +23,8 @@ const Case = sequelize.define(
     isMonitored: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     comment: { type: DataTypes.TEXT, allowNull: true },
     claimSum: { type: DataTypes.DECIMAL(15, 2), allowNull: true },
+    caseCategory: { type: DataTypes.STRING(512), allowNull: true },
+    caseSides: { type: DataTypes.JSON, allowNull: true },
     versionDateUtc: { type: DataTypes.DATE, allowNull: true },
     groupName: { type: DataTypes.STRING(255), allowNull: true },
     folderId: { type: DataTypes.INTEGER, allowNull: true },
@@ -39,6 +41,7 @@ const Case = sequelize.define(
       { fields: ['caseNumber'] },
       { fields: ['groupName', 'folderId'] },
       { fields: ['checkId'] },
+      { fields: ['versionDateUtc'] },
     ],
   },
 );
@@ -117,6 +120,8 @@ const EVENT_TYPES = Object.freeze({
   CASE_ADDED: 'case.added',
   SESSION_ADDED: 'session.added',
   SESSION_IWILLGO_AUTO_SET: 'session.iwillgo.auto_set',
+  LEADERTASK_TASK_PUSHED: 'leadertask.task.pushed',
+  LEADERTASK_TASK_FAILED: 'leadertask.task.failed',
 });
 
 const Event = sequelize.define(

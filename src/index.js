@@ -3,6 +3,7 @@ const { Case, Session, Event, Check, EVENT_TYPES, logEvent, initSchema, clearDat
 const { Op } = require('sequelize');
 const { randomUUID } = require('crypto');
 const config = require('./config');
+const { pushToLeaderTask } = require('./leadertaskSync');
 
 async function tryStep(label, fn) {
   console.log(`\n=== ${label} ===`);
@@ -32,6 +33,8 @@ function projectCase(c) {
     isMonitored: !!c.isMonitored,
     comment: c.comment ?? null,
     claimSum: c.claimSum ?? null,
+    caseCategory: c.caseCategory ?? null,
+    caseSides: Array.isArray(c.sides) ? c.sides : null,
     versionDateUtc: c.versionDateUtc ? new Date(c.versionDateUtc) : null,
     groupName: c._group ?? null,
     folderId: c._folderId ?? null,
@@ -119,6 +122,16 @@ async function autoSetIWillGo(client, checkId, stats) {
   return { ok, fail };
 }
 
+function parsePravoDate(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value !== 'string') return new Date(value);
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(value)) {
+    return new Date(`${value}+03:00`);
+  }
+  return new Date(value);
+}
+
 function projectEvent(e, caseRow) {
   const judge =
     e.judges?.find?.((j) => j.role === 'MainJudge' || j.role === 'Судья-докладчик')?.name ??
@@ -131,7 +144,7 @@ function projectEvent(e, caseRow) {
   return {
     sessionId: e.id ?? e.Id ?? e.sessionId ?? e.SessionId,
     caseId: caseRow.caseId,
-    date: new Date(e.hearingDate ?? e.date ?? e.Date),
+    date: parsePravoDate(e.hearingDate ?? e.date ?? e.Date),
     court: e.courtName ?? e.CourtName ?? e.court ?? e.Court ?? null,
     courtTag: e.courtTag ?? e.CourtTag ?? null,
     judge,
@@ -247,6 +260,7 @@ async function ingestCaseEvents(client, checkId, stats) {
     cases: { new: 0, updated: 0 },
     sessions: { new: 0, updated: 0 },
     iWillGo: { ok: 0, fail: 0 },
+    leadertask: { ok: 0, fail: 0 },
   };
 
   try {
@@ -314,11 +328,18 @@ async function ingestCaseEvents(client, checkId, stats) {
       `\n=== Sync summary ===\n` +
         `Cases:    +${stats.cases.new} new, ~${stats.cases.updated} updated`,
     );
+    if (config.leadertask.enabled) {
+      console.log(
+        `LeaderTask: +${stats.leadertask.ok} pushed, !${stats.leadertask.fail} failed`,
+      );
+    }
 
     await autoSetIWillGo(client, check.checkId, stats);
 
     const events = await ingestCaseEvents(client, check.checkId, stats);
     stats.events = events;
+
+    await pushToLeaderTask({ checkId: check.checkId, stats });
 
     const autoPost = await autoSetIWillGo(client, check.checkId, stats);
     const postAdded = autoPost.ok;

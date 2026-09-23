@@ -30,6 +30,7 @@ router.get('/', async (req, res, next) => {
       limit: size,
       offset,
       order: [['versionDateUtc', 'DESC']],
+      attributes: { exclude: ['caseSides'] },
     });
 
     res.json({
@@ -39,6 +40,18 @@ router.get('/', async (req, res, next) => {
       size,
       pages: Math.ceil(count / size) || 1,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/:caseId', async (req, res, next) => {
+  try {
+    const row = await Case.findOne({
+      where: { caseId: req.params.caseId },
+    });
+    if (!row) return res.status(404).json({ error: 'Case not found' });
+    res.json(row);
   } catch (err) {
     next(err);
   }

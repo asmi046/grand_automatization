@@ -26,6 +26,10 @@
     "tagPath": "/tag",
     "system": "web",
     "typeDevice": "web",
+    "enabled": false,
+    "autoTagName": "Авто",
+    "autoTagColor": "#A020F0",
+    "caseUrlPattern": "https://dela.pravo.tech/card/case/{caseId}",
     "requestTimeoutMs": 30000,
     "debug": true,
     "defaultHeaders": {

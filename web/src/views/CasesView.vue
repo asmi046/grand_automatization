@@ -19,7 +19,15 @@
       </el-form-item>
     </el-form>
 
-    <el-table :data="rows" v-loading="loading" stripe border>
+    <el-table
+      :data="rows"
+      v-loading="loading"
+      stripe
+      border
+      :row-class-name="rowClass"
+      style="cursor: pointer"
+      @row-click="(row) => open(row)"
+    >
       <el-table-column label="Номер дела / caseId" width="260">
         <template #default="{ row }">
           <div>{{ row.caseNumber || '—' }}</div>
@@ -58,8 +66,10 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { api, formatDate } from '../api';
 
+const router = useRouter();
 const rows = ref([]);
 const total = ref(0);
 const page = ref(1);
@@ -67,6 +77,14 @@ const size = ref(30);
 const loading = ref(false);
 
 const filters = reactive({ q: '', groupName: '', isMonitored: '' });
+
+function open(row) {
+  if (row?.caseId) router.push({ name: 'case-detail', params: { caseId: row.caseId } });
+}
+
+function rowClass({ row }) {
+  return row?.caseId ? 'clickable-row' : '';
+}
 
 async function load(p) {
   if (p) page.value = p;
@@ -95,3 +113,9 @@ function reset() {
 
 onMounted(load);
 </script>
+
+<style scoped>
+:deep(.clickable-row:hover) td {
+  background-color: #ecf5ff !important;
+}
+</style>

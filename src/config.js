@@ -58,6 +58,7 @@ const config = {
     baseUrl: requireEnv('LEADERTASK_BASE_URL').replace(/\/+$/, ''),
     login: optionalEnv('LEADERTASK_LOGIN', ''),
     password: optionalEnv('LEADERTASK_PASSWORD', ''),
+    enabled: boolEnv('LEADERTASK_ENABLED', fileConfig.leadertask.enabled),
   },
   db: {
     ...fileConfig.db,
