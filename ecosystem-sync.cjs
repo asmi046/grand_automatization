@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'grand-pravo-sync',
-      script: 'src/index.js',
+      script: 'index.js',
       cwd: '/home/user/grand-pravo',
       cron_restart: '*/3 * * * *',
       autorestart: false,
