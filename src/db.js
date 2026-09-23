@@ -183,9 +183,20 @@ async function clearDatabase() {
   }
 }
 
-async function initSchema() {
+async function initSchema(options = {}) {
   await sequelize.authenticate();
-  await sequelize.sync({ alter: config.db.syncAlter });
+
+  const isDev = process.env.NODE_ENV !== 'production';
+  const nodeEnv = process.env.NODE_ENV || 'development';
+
+  const rawAlter = isDev ? options.alter !== false : false;
+  const alter = rawAlter && config.db.syncAlter !== false;
+  const logging = options.logging ?? (process.env.DB_SYNC_LOG === '1' && console.log);
+
+  const t0 = Date.now();
+  console.log(`[db] sync start (NODE_ENV=${nodeEnv}, alter=${alter})`);
+  await sequelize.sync({ alter, logging });
+  console.log(`[db] sync done in ${Date.now() - t0}ms`);
 }
 
 module.exports = {

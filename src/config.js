@@ -55,13 +55,18 @@ const config = {
     login: requireEnv('PRAVO_LOGIN'),
     password: requireEnv('PRAVO_PASSWORD'),
   },
-  leadertask: {
-    ...fileConfig.leadertask,
-    baseUrl: requireEnv('LEADERTASK_BASE_URL').replace(/\/+$/, ''),
-    login: optionalEnv('LEADERTASK_LOGIN', ''),
-    password: optionalEnv('LEADERTASK_PASSWORD', ''),
-    enabled: boolEnv('LEADERTASK_ENABLED', fileConfig.leadertask.enabled),
-  },
+  leadertask: (() => {
+    const enabled = boolEnv('LEADERTASK_ENABLED', fileConfig.leadertask.enabled);
+    return {
+      ...fileConfig.leadertask,
+      enabled,
+      baseUrl: enabled
+        ? requireEnv('LEADERTASK_BASE_URL').replace(/\/+$/, '')
+        : optionalEnv('LEADERTASK_BASE_URL', fileConfig.leadertask.baseUrl || '').replace(/\/+$/, ''),
+      login: optionalEnv('LEADERTASK_LOGIN', ''),
+      password: optionalEnv('LEADERTASK_PASSWORD', ''),
+    };
+  })(),
   db: {
     ...fileConfig.db,
     host: requireEnv('DB_HOST'),

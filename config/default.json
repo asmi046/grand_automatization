@@ -38,7 +38,7 @@
   },
   "db": {
     "dialect": "mysql",
-    "syncAlter": true,
+    "syncAlter": false,
     "pool": {
       "max": 5,
       "min": 0,
